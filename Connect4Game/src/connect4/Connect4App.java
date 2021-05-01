@@ -1,9 +1,14 @@
 package connect4;
 
 import javafx.application.Application;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -11,8 +16,11 @@ import javafx.scene.shape.Shape;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
+import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 
 public class Connect4App extends Application {
@@ -25,6 +33,7 @@ public class Connect4App extends Application {
     Color white = Color.WHITE;
 
     boolean yellowTurn = true;
+    boolean playingCPU = false;
     boolean gameOver = false;
 
     Slot[][] grid = new Slot[COLUMNS][ROWS];
@@ -47,6 +56,19 @@ public class Connect4App extends Application {
         primaryStage.setTitle("Connect4");
         primaryStage.setScene(new Scene(root));
         primaryStage.show();
+    }
+
+    public Pane makeSidePane() {
+        VBox vbox = new VBox();
+        vbox.setAlignment(Pos.TOP_CENTER);
+        Button newGame = new Button("New Game");
+        newGame.setOnAction(e -> resetGame());
+        Button playCPU = new Button("Play CPU");
+        playCPU.setOnAction(e->playAgainstCPU());
+        vbox.getChildren().add(newGame);
+        vbox.getChildren().add(playCPU);
+
+        return vbox;
     }
 
     public Shape makeBoard() {
@@ -87,12 +109,39 @@ public class Connect4App extends Application {
     }
 
     public void placeDisk(int columnNum) {
+        if (!grid[columnNum][0].isEmpty()) {
+            return;
+        } else if (!gameOver) {
+            for (int i = ROWS - 1; i >= 0; i--) {
+                if (grid[columnNum][i].isEmpty()) {
+                    grid[columnNum][i].changeState(yellowTurn ? 1 : 2);
+                    if (checkForWin(yellowTurn ? 1 : 2)) {
+                        gameOver = true;
+                    } else if (checkFullBoard()) {
+                        gameOver = true;
+                    }
+                    yellowTurn = !yellowTurn;
+                    if (playingCPU) {
+                        CPUturn();
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    public void CPUturn() {
+        Random rand = new Random();
+        int columnNum = rand.nextInt(COLUMNS - 1);
+        while (!grid[columnNum][0].isEmpty()) {
+            columnNum = columnNum++ % (COLUMNS - 1);
+        }
+
         if (!gameOver) {
             for (int i = ROWS - 1; i >= 0; i--) {
                 if (grid[columnNum][i].isEmpty()) {
                     grid[columnNum][i].changeState(yellowTurn ? 1 : 2);
                     if (checkForWin(yellowTurn ? 1 : 2)) {
-                        gameEnd();
                         gameOver = true;
                     }
                     yellowTurn = !yellowTurn;
@@ -100,6 +149,15 @@ public class Connect4App extends Application {
                 }
             }
         }
+    }
+
+    public boolean checkFullBoard() {
+        for (int i = 0; i < COLUMNS; i++) {
+            if (grid[i][0].isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean checkForWin(int i) {
@@ -151,10 +209,6 @@ public class Connect4App extends Application {
         s4.setStrokeWidth(5);
     }
 
-    public void gameEnd() {
-        //
-    }
-
     public void resetGame() {
         for (int x = 0; x < COLUMNS; x++) {
             for (int y = 0; y < ROWS; y++) {
@@ -165,16 +219,18 @@ public class Connect4App extends Application {
         gameOver = false;
     }
 
-    public Pane makeSidePane() {
-        Pane sidePane = new Pane();
-        Button newGame = new Button("New Game");
-        newGame.setOnAction(e -> resetGame());
-
-        sidePane.getChildren().add(newGame);
-
-        return sidePane;
+    public void playAgainstCPU() {
+        if (gameOver) {
+            for (int x = 0; x < COLUMNS; x++) {
+                for (int y = 0; y < ROWS; y++) {
+                    grid[x][y].changeState(0);
+                    grid[x][y].setStrokeWidth(0);
+                }
+            }
+            gameOver = false;
+        }
+        playingCPU = true;
     }
-
 
     private class Slot extends Circle {
         int state; // 0 represents empty slot, 1 means occupied by yellow, 2 means occupied by red
